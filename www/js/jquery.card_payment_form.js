@@ -1,3 +1,5 @@
+if (!window.console) console = {log: function() {}}; // В IE нет класса console
+
 Object.keys = Object.keys || function(o) {  
     var result = [];  
     for(var name in o) {  
