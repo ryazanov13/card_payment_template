@@ -790,8 +790,8 @@ jQuery.extend({
 				if(typeof settings.min_card_cvc_length === 'undefined' || typeof settings.max_card_cvc_length === 'undefined') {
 					var min_card_cvc_length = undefined, max_card_cvc_length = undefined;
 					for(var n in settings.accepted_card_brands){
-						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'VISA' || 
-							settings.accepted_card_brands[n] === 'VISA ELECTRON' || settings.accepted_card_brands[n] === 'MAESTRO' || 
+						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'MAESTRO' || 
+							settings.accepted_card_brands[n] === 'VISA' || settings.accepted_card_brands[n] === 'VISA ELECTRON' ||
 							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER') {
 							min_card_cvc_length = min_card_cvc_length > 3 || typeof min_card_cvc_length == 'undefined' ? 3 : min_card_cvc_length;
 							max_card_cvc_length = max_card_cvc_length < 3 || typeof max_card_cvc_length == 'undefined' ? 3 : max_card_cvc_length;
@@ -807,18 +807,15 @@ jQuery.extend({
 				if(typeof settings.min_name_on_card_length === 'undefined' || typeof settings.max_name_on_card_length === 'undefined') {
 					var min_name_on_card_length = undefined, max_name_on_card_length = undefined;
 					for(var n in settings.accepted_card_brands){
-						if(settings.accepted_card_brands[n] === 'VISA' || settings.accepted_card_brands[n] === 'AMERICAN EXPRESS' || settings.accepted_card_brands[n] === 'DINERS CLUB' || 
-							settings.accepted_card_brands[n] === 'VISA ELECTRON' ) {
+						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'MAESTRO' || 
+							settings.accepted_card_brands[n] === 'VISA' || settings.accepted_card_brands[n] === 'VISA ELECTRON' ||
+							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER') {
 							min_name_on_card_length = min_name_on_card_length > 3 || typeof min_name_on_card_length == 'undefined' ? 3 : min_name_on_card_length;
-							max_name_on_card_length = max_name_on_card_length < 20 || typeof max_name_on_card_length == 'undefined' ? 20 : max_name_on_card_length;
+							max_name_on_card_length = max_name_on_card_length < 27 || typeof max_name_on_card_length == 'undefined' ? 27 : max_name_on_card_length;
 						}
-						else if(settings.accepted_card_brands[n] === 'DINERS CLUB' ) {
-							min_name_on_card_length = min_name_on_card_length > 3 || typeof min_name_on_card_length == 'undefined' ? 3 : min_name_on_card_length;
-							max_name_on_card_length = max_name_on_card_length < 18 || typeof max_name_on_card_length == 'undefined' ? 18 : max_name_on_card_length;
-						}
-						else if( settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'MAESTRO' ){
-							min_name_on_card_length = min_name_on_card_length > 3 || typeof min_name_on_card_length == 'undefined' ? 3 : min_name_on_card_length;
-							max_name_on_card_length = max_name_on_card_length < 22 || typeof max_name_on_card_length == 'undefined' ? 22 : max_name_on_card_length;
+						else if( settings.accepted_card_brands[n] === 'AMERICAN EXPRESS'  ){
+							min_name_on_card_length = min_name_on_card_length > 4 || typeof min_name_on_card_length == 'undefined' ? 4 : min_name_on_card_length;
+							max_name_on_card_length = max_name_on_card_length < 27 || typeof max_name_on_card_length == 'undefined' ? 27 : max_name_on_card_length;
 						}	
 					}
 					settings.min_name_on_card_length = min_name_on_card_length;
