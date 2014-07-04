@@ -769,10 +769,13 @@ jQuery.extend({
 					var min_card_number_length = undefined, max_card_number_length = undefined;
 					for(var n in settings.accepted_card_brands){
 						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'VISA' ||
-							settings.accepted_card_brands[n] === 'MAESTRO' || settings.accepted_card_brands[n] === 'VISA ELECTRON' ||
-							settings.accepted_card_brands[n] === 'DISCOVER') {	
+							settings.accepted_card_brands[n] === 'VISA ELECTRON' || settings.accepted_card_brands[n] === 'DISCOVER') {	
 							min_card_number_length = min_card_number_length > 16 || typeof min_card_number_length == 'undefined' ? 16 : min_card_number_length;
 							max_card_number_length = max_card_number_length < 16 || typeof max_card_number_length == 'undefined' ? 16 : max_card_number_length;
+						}
+						else if( settings.accepted_card_brands[n] === 'MAESTRO' ){
+							min_card_number_length = min_card_number_length > 16 || typeof min_card_number_length == 'undefined' ? 16 : min_card_number_length;
+							max_card_number_length = max_card_number_length < 19 || typeof max_card_number_length == 'undefined' ? 19 : max_card_number_length;
 						}
 						else if( settings.accepted_card_brands[n] === 'AMERICAN EXPRESS' ){
 							min_card_number_length = min_card_number_length > 15 || typeof min_card_number_length == 'undefined' ? 15 : min_card_number_length;
