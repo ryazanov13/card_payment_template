@@ -1,4 +1,9 @@
-if (!window.console) console = {log: function() {}}; // В IE нет класса console
+// Fix for IE9
+// if (!window.console) console = {log: function() {}}; // В IE нет класса console
+window.console = window.console || {
+	log: function() {}
+};
+// End fix for IE9
 
 Object.keys = Object.keys || function(o) {  
     var result = [];  
@@ -21,15 +26,22 @@ jQuery.extend({
  * 1. отдельные обработчики для полей форм(допустим вставка сообщения в поле message в info_form
  * 2. добавление пользовательских форм
  * 3. при ответе reload, возможность отобразить сообщение
+ * 4. исключить мерцания при очистки полей от плохих символов
  */
 (function( $ ){
+//'use strict';
 
-	// Constants
+	
+	/**
+	 * Constants
+	 */ 
 	PLUGIN_NAME = 'card_payment_form',
+	MAXLENGTH_ATTRIBUTE = 'maxlength',
 	SMS_CODE_LENGTH = 6,
-	//
-	// Таймаут до появления кнопки обновления смс-кода
-	// 
+	
+	/*
+	 * Таймаут до появления кнопки обновления смс-кода
+	 */ 
 	SMS_CODE_REFRESH_TIMEOUT = 60,	
 	
 	LOADER_REFERSH_ACTION_TIMEOUT = 5,
@@ -73,6 +85,14 @@ jQuery.extend({
 	
 	ID_FORM_FADER = 'form_fader';
 	
+	/*
+	 * Опера не можеть работать со вставкой данных из буфера обмена. Поэтому для
+	 * оперы мы немного меняем поведение формы. А это флаг определяющий это 
+	 * поведение
+	 * @type Boolean
+	 */
+	var isOpera = !!window.opera;
+	
 	var 
 		request_url = undefined,
 		customer = undefined,
@@ -87,10 +107,9 @@ jQuery.extend({
 			}
 		},
 
-		
 		default_settings = {
 			'form_type' : 'card_form',
-			'accepted_card_brands' : [ 'VI', 'CA' ],
+			'accepted_card_brands' : [ 'VISA','VISA ELECTRON','MASTERCARD','MAESTRO' ],
 			'min_card_number_length' : undefined,
 			'max_card_number_length' : undefined,
 			'min_card_cvc_length' : undefined,
@@ -99,9 +118,9 @@ jQuery.extend({
 			'max_name_on_card_length' : undefined,
 			
 			// Обрпботчики для отображения ошибок
-			'ok_seter' : [],
-			'error_seter' : [],
-			'nothing_seter' : [],
+			'ok_setter' : [],
+			'error_setter' : [],
+			'nothing_setter' : [],
 			// Валидаторы для подмены
 			'validators' : [],
 			// Обработчики привязываемые к полям
@@ -110,9 +129,13 @@ jQuery.extend({
 		},
 		settings = {},
 		fields = {
-			'card_num_fields' : [],
+			'card_num_fields' : undefined,
+			'card_num_field_lengths' : [],
+			'card_num_fields_total_lengths' : undefined,
 			'card_num' : undefined,
-			'exp_date_fields' : [],
+			'exp_date_fields' : undefined,
+			'exp_date_field_lengths' : [],
+			'exp_date_fields_total_lengths' : undefined,
 			'exp_date' : undefined,
 			'exp_date_type' : undefined,
 			'name_on_card' : undefined,
@@ -122,116 +145,122 @@ jQuery.extend({
 		};
 	
 	var 
-		ok_seter = {	
-			form : function (data, text, forms, fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		ok_setter = {	
+			form : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('from: status ok');
 				data['info_form'].removeClass("field-error").addClass("field-ok");
 				fields.message.text('');
 				forms.show_form.apply( this , [ID_INFO_FORM]);
 			},
-			card_num_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num_fields: status ok');
-				for(var n in fields.card_num_fields)
-					fields.card_num_fields[n].removeClass("field-error").addClass("field-ok");	
+				fields.card_num_fields.each(function(i) {
+					$(this).removeClass("field-error").addClass("field-ok");	
+				});
 			},
-			card_num : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num: status ok');
-				fields.card_num.addClass("field-ok").removeClass("field-error");
+				fields.card_num.removeClass("field-error").addClass("field-ok");
 			},
-			exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date_fields: status ok');
-				for(var n in fields.exp_date_fields) 
-					fields.exp_date_fields[n].addClass("field-ok").removeClass("field-error");
+				fields.exp_date_fields.each(function(i) {
+					$(this).removeClass("field-error").addClass("field-ok");	
+				});
 			},
-			exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date: status ok');
-				fields.exp_date.addClass("field-ok").removeClass("field-error");	
+				fields.exp_date.removeClass("field-error").addClass("field-ok");	
 			},
-			name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('name_on_card: status ok');
-				fields.name_on_card.addClass("field-ok").removeClass("field-error");	
+				fields.name_on_card.removeClass("field-error").addClass("field-ok");	
 			},
-			card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('name_on_card: status ok');
-				fields.card_cvc.addClass("field-ok").removeClass("field-error");						
+				fields.card_cvc.removeClass("field-error").addClass("field-ok");						
 			},
-			sms_code : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			sms_code : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('name_on_card: status ok');
-				fields.sms_code.addClass("field-ok").removeClass("field-error");	
+				fields.sms_code.removeClass("field-error").addClass("field-ok");	
 			}
 		},
-		error_seter = {
-			form : function (data, text, forms, fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		error_setter = {
+			form : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('from: status error');
-				data['info_form'].addClass("field-error").removeClass("field-ok");
+				data['info_form'].removeClass("field-ok").addClass("field-error");
 				fields.message.text(text);
 				forms.show_form.apply( this , [ID_INFO_FORM]);
 			},
-			card_num_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num_fields: status error');
-				for(var n in fields.card_num_fields)
-					fields.card_num_fields[n].removeClass("field-ok").addClass("field-error");		
+				fields.card_num_fields.each(function(i) {
+					$(this).removeClass("field-ok").addClass("field-error");	
+				});
 			},
-			card_num : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num: status error');
 				fields.card_num.removeClass("field-ok").addClass("field-error");
 			},
-			exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date_fields: status error');
-				for(var n in fields.exp_date_fields) 
-					fields.exp_date_fields[n].addClass("field-error").removeClass("field-ok");
+				fields.exp_date_fields.each(function(i) {
+					$(this).removeClass("field-ok").addClass("field-error");	
+				});
 			},
-			exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date: status error');
 				fields.exp_date.removeClass("field-ok").addClass("field-error");
 			},
-			name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('name_on_card: status error');
 				fields.name_on_card.removeClass("field-ok").addClass("field-error");
 			},
-			card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_cvc: status error');
 				fields.card_cvc.removeClass("field-ok").addClass("field-error");
 			},
-			sms_code : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			sms_code : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('sms_code: status error');
 				fields.sms_code.removeClass("field-ok").addClass("field-error");
 			}
 		},
-		nothing_seter = {
-			form : function (data, text, forms, fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		nothing_setter = {
+			form : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('from: status nothing');
 				data['info_form'].removeClass("field-error").removeClass("field-ok");
 				fields.message.text('');
 				forms.show_form.apply( this , [ID_INFO_FORM]);
 			},
-			card_num_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num_fields: status nothing');
-				for(var n in fields.card_num_fields) 
-					fields.card_num_fields[n].removeClass("field-ok").removeClass("field-error");
+				fields.card_num_fields.each(function(i) {
+					$(this).removeClass("field-ok").removeClass("field-error");
+				});
 			},
-			card_num : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_num : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_num: status nothing');
 				fields.card_num.removeClass("field-ok").removeClass("field-error");
 			},
-			exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date_fields: status nothing');
-				for(var n in fields.exp_date_fields) 
-					fields.exp_date_fields[n].removeClass("field-ok").removeClass("field-error");
+				fields.exp_date_fields.each(function(i) {
+					$(this).removeClass("field-ok").removeClass("field-error");
+				});
 			},
-			exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('exp_date: status nothing');
 				fields.exp_date.removeClass("field-ok").removeClass("field-error");
 			},
-			name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('name_on_card: status nothing');
 				fields.name_on_card.removeClass("field-ok").removeClass("field-error");
 			},
-			card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('card_cvc: status nothing');
 				fields.card_cvc.removeClass("field-ok").removeClass("field-error");
 			},
-			sms_code : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			sms_code : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 				console.log('sms_code: status nothing');
 				fields.sms_code.removeClass("field-ok").removeClass("field-error");
 			}
@@ -239,66 +268,66 @@ jQuery.extend({
 	
 	var validators = {
 		/**
-		 * проверка данных карты
-		 * @param {array} arrCardFormParams
+		 * проверка данных карты на frontend'е
+		 * @param {array} cardFormParams данные карты из формы
 		 * @returns {array}
 		 */
-		check_card_data: function(arrCardFormParams, settings) {
+		check_card_data: function(cardFormParams, settings) {
 			
 			var arrErrors = {};
 			
-			if( (typeof fields.exp_date !== 'undefined' && !validators.exp_date(arrCardFormParams[NAME_CARD_INPUT_FORM_EXP_DATE_FIELD], settings))
-				|| (Object.keys(fields.exp_date_fields).length && !validators.exp_date(arrCardFormParams[NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD]+"/"+arrCardFormParams[NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD], settings))
+			if( (typeof fields.exp_date !== 'undefined' && !validators.exp_date(cardFormParams[NAME_CARD_INPUT_FORM_EXP_DATE_FIELD], settings))
+				|| (typeof fields.exp_date_fields !== 'undefined' && !validators.exp_date(cardFormParams[NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD]+"/"+cardFormParams[NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD], settings))
 				)
 				arrErrors[NAME_CARD_INPUT_FORM_EXP_DATE_FIELD] = 'Пожалуйста, введите действительную дату';
 			
-			if( (typeof fields.card_num !== 'undefined' && !validators.card_num(arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_FIELD], settings))
-				||	(Object.keys(fields.card_num_fields).length && !validators.card_num(
-						arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_1_FIELD]+arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_2_FIELD]
-						+arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_3_FIELD]+arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_4_FIELD], settings))  
+			if( (typeof fields.card_num !== 'undefined' && !validators.card_num(cardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_FIELD], settings))
+				||	(typeof fields.card_num_fields !== 'undefined' && !validators.card_num(
+						cardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_1_FIELD]+cardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_2_FIELD]
+						+cardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_3_FIELD]+cardFormParams[NAME_CARD_INPUT_FORM_CARD_NUM_4_FIELD], settings))  
 				)
 				arrErrors[NAME_CARD_INPUT_FORM_CARD_NUM_FIELD] = 'Номер карты введен неверно';
 			
-			if(!validators.name_on_card(arrCardFormParams[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD], settings))
+			if(!validators.name_on_card(cardFormParams[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD], settings))
 				arrErrors[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD] = 'Имя владельца карты введен неверно';
 			
-			if(!validators.card_cvc(arrCardFormParams[NAME_CARD_INPUT_FORM_CARD_CVC_FIELD], settings))
+			if(!validators.card_cvc(cardFormParams[NAME_CARD_INPUT_FORM_CARD_CVC_FIELD], settings))
 				arrErrors[NAME_CARD_INPUT_FORM_CARD_CVC_FIELD] = 'CVC карты введен неверно';
 			
 			return arrErrors;
 		},
 		/**
-		 * 
-		 * @param {array} arrCodeFormParams
+		 * проверка sms-кода на frontend'е
+		 * @param {array} codeFormParams дкод подтверждения из формы
 		 * @returns {unresolved}
 		 */
-		check_code_data: function(arrCodeFormParams, settings) {
+		check_code_data: function(codeFormParams, settings) {
 			
 			var arrErrors = [];
 			
-			if(!validators.sms_code(arrCodeFormParams[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD], settings))
+			if(!validators.sms_code(codeFormParams[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD], settings))
 				arrErrors[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD] = 'Пожалуйста, введите правельный sms код';
 			
 			return arrErrors;
 		},
 		/**
 		 * проверка номера карты
-		 * @param {string} nCardNumber
+		 * @param {string} cardNumber номер карты
 		 * @returns {Boolean}
 		 */
-		card_num: function( strCardNumber, settings) {
+		card_num: function( cardNumber, settings) {
 			// accept only spaces, digits and dashes
-			if (/[^0-9 -]+/.test(strCardNumber))		
+			if (/[^0-9 -]+/.test(cardNumber))		
 				return false;
 
-			strCardNumber = strCardNumber.replace(/\D/g, "");			
-			if(strCardNumber.length < settings.min_card_number_length || strCardNumber.length >  settings.max_card_number_length)
+			cardNumber = cardNumber.replace(/\D/g, "");			
+			if(cardNumber.length < settings.min_card_number_length || cardNumber.length >  settings.max_card_number_length)
 				return false;
 						
 			var nCheck = 0, nDigit = 0,	bEven = false;
 	 
-	  		for (var n = strCardNumber.length - 1; n >= 0 ; n--) {
-	  			var cDigit = strCardNumber.charAt(n);
+	  		for (var n = cardNumber.length - 1; n >= 0 ; n--) {
+	  			var cDigit = cardNumber.charAt(n);
 	  			var nDigit = parseInt(cDigit, 10);
 	  			if (bEven) {
 	  				if ((nDigit *= 2) > 9)
@@ -311,13 +340,13 @@ jQuery.extend({
 		},
 		/**
 		 * проверка даты
-		 * @param {string} nExpDate Сдесть ожидаем дату в формате mm/yyyy
+		 * @param {string} expireDate дата в формате mm/yyyy или mm/yy
 		 * @returns {Boolean}
 		 */
-		exp_date: function( strExpDate, settings ) {
+		exp_date: function( expireDate, settings ) {
 			var date;
 			try {
-				date = $.datepicker.parseDate("dd/mm/yy", "01/" + strExpDate);
+				date = $.datepicker.parseDate("dd/mm/yy", "01/" + expireDate);
 				date = new Date(new Date(date).setMonth(date.getMonth()+1));
 			} 
 			catch (e) {
@@ -327,142 +356,522 @@ jQuery.extend({
 		},
 		/**
 		 * проверка имени владельца карты
-		 * @param {string} strNameOnCard
+		 * @param {string} nameOnCard имя владельца карты
 		 * @returns {Boolean}
 		 */
-		name_on_card: function( strNameOnCard, settings ) {
+		name_on_card: function( nameOnCard, settings ) {
 			// accept only spaces, digits and dashes
-			if (/[^A-Za-z -]+/.test(strNameOnCard))		
+			if (/[^A-Za-z -]+/.test(nameOnCard))		
 				return false;
 
-			strNameOnCard = strNameOnCard.replace(/[^A-Za-z -]/g, "");			
-			if(strNameOnCard.length < settings.min_name_on_card_length || strNameOnCard.length >  settings.max_name_on_card_length)
+			nameOnCard = nameOnCard.replace(/[^A-Za-z -]/g, "");			
+			if(nameOnCard.length < settings.min_name_on_card_length || nameOnCard.length >  settings.max_name_on_card_length)
 				return false;
 			
 	  		return true;	
 		},
 		/**
 		 * проверка cvc карты
-		 * @param {string} nCardCvc
+		 * @param {string} сardCvc код cvc
 		 * @returns {Boolean}
 		 */
-		card_cvc: function( strCardCvc, settings ) {
-			if (/[^0-9]+/.test(strCardCvc))		
+		card_cvc: function( cardCvc, settings ) {
+			if (/[^0-9]+/.test(cardCvc))		
 				return false;
 			
-			strCardCvc = strCardCvc.replace(/\D/g, "");
-			if(strCardCvc.length < settings.min_card_cvc_length || strCardCvc.length >  settings.max_card_cvc_length)
+			cardCvc = cardCvc.replace(/\D/g, "");
+			if(cardCvc.length < settings.min_card_cvc_length || cardCvc.length >  settings.max_card_cvc_length)
 				return false;
 			
 			return true;
 		},
 		/**
-		 * 
-		 * @param {string} strSmsCode
+		 * Проверка кода для прохождения sms-check
+		 * @param {string} smsCode код из sms
 		 * @returns {Boolean}
 		 */
-		sms_code: function( strSmsCode, settings ) {
-			return (/[0-9]{6}/.test(strSmsCode));		
+		sms_code: function( smsCode, settings ) {
+			return (/[0-9]{6}/.test(smsCode));		
 		}
 	};	
 	var handlers = {
-		card_num_fields: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
-			var nSwitchToField = undefined;
-			this.value = this.value.replace(/[^0-9]/g, "");
-			
-			var nFieldNumber = $(this).attr('name').replace('card_num_','');
-			if(this.value.length >= 4 && (
-					nFieldNumber === '1' 
-					|| nFieldNumber === '2' 
-					|| nFieldNumber === '3'))
-				nSwitchToField = parseInt(nFieldNumber)+1;
-			else if(this.value.length <= 0 && (
-					nFieldNumber === '2' 
-					|| nFieldNumber === '3' 
-					|| nFieldNumber === '4'))
-				nSwitchToField = parseInt(nFieldNumber)-1;
-			
-			//
-			var strCardNum = '';
-			for(var n in fields.card_num_fields) {
-				if(parseInt(fields.card_num_fields[n].attr('name').replace('card_num_','')) === nSwitchToField)
-					fields.card_num_fields[n].focus();
-				value = fields.card_num_fields[n].val();
-				strCardNum = strCardNum + value;  
+		
+		/**
+		 * определение позиции коретки курсора в поле
+		 * 
+		 * @param {type} node dom объект поля, в которо происходит позиционирование
+		 * @param {type} start
+		 * @param {type} end
+		 * @returns {jquery.card_payment_form_L31.handlers.caret.jquery.card_payment_formAnonym$4}
+		 */
+		caret: function (node, start, end) {
+			var range;
+			if (start !== undefined) {
+				if (node.setSelectionRange) {
+					node.setSelectionRange(start, end);
+				// IE, "else" for opera 10
+				} else if (document.selection && document.selection.createRange) {
+					range = node.createTextRange();
+					range.collapse(true);
+					range.moveEnd('character', end);
+					range.moveStart('character', start);
+					range.select();
+				}
+			} else {
+				start = 0;
+				end = 0;
+				if ('selectionStart' in node) {
+					start = node.selectionStart;
+					end = node.selectionEnd;
+				} else if (node.createTextRange) {
+					range = document.selection.createRange();
+					var dup = range.duplicate();
+
+					if (range.parentElement() === node) {
+						start = -dup.moveStart('character', -100000);
+						end = start + range.text.length;
+					}
+				}
+				return {
+					start: start,
+					end: end
+				};
 			}
-			
-			if(strCardNum.length >= settings.min_card_number_length && strCardNum.length <= settings.max_card_number_length)
-				if(validators.card_num( strCardNum , settings)) ok_seter.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);					
-			else nothing_seter.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
 		},
-		card_num: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		/**
+		 * обработчик данных при вставке из буфера обмена
+		 * для полей карты
+		 * 
+		 * @param {type} element
+		 * @param {type} options
+		 * @returns {undefined}
+		 */
+		after_paste_on_card_num_fields: function (element, options) {
+			// for example, inputs value before paste: [00|2 ] [33  ], need paste: 1111
+			// now state: [001111|2] [33  ]
+
+			var firstValue = element[0].value,
+				caretEnd = handlers.caret(element[0]).end, // in webkit start: 2, end: 6
+				left = firstValue.slice(0, caretEnd), // 001111
+				right = firstValue.slice(caretEnd), // 2
+				rightFreeSpace = options.maxlength - right.length, // 3
+				isSetFocus = false,
+				buffer, newCaretStart, i;
+
+			for (i = fields.card_num_fields.length - 1; i > options.index; i--) {
+				rightFreeSpace += fields.card_num_field_lengths[i] - fields.card_num_fields[i].value.length;
+			}
+
+			if (left.length > rightFreeSpace) {
+				left = left.slice(0, rightFreeSpace); // 001111.slice(0, 5)
+				newCaretStart = rightFreeSpace;
+			} else {
+				newCaretStart = caretEnd;
+			}
+
+			if (firstValue.length > options.maxlength) {
+				element[0].value = (left + right).slice(0, options.maxlength); // [0011] [33  ]
+
+				// caret remains on input
+				if (newCaretStart <= options.maxlength) {
+					 handlers.caret(element[0], newCaretStart, newCaretStart);
+					isSetFocus = true;
+				}
+
+				buffer = (left + right).slice(options.maxlength); // 112
+
+				if (buffer.length) {
+					newCaretStart -= Math.min(options.maxlength, left.length);
+					var maxlength, valLength;
+					while (fields.card_num_fields[++i]) {
+						maxlength = fields.card_num_field_lengths[i];
+						buffer += fields.card_num_fields[i].value; // 11233
+
+						fields.card_num_fields.eq(i)
+							.val(buffer.slice(0, maxlength))
+							.change();
+
+						if (buffer.length <= maxlength) {
+							break;
+						}
+
+						valLength = fields.card_num_fields[i].value.length;
+
+						if (!isSetFocus) {
+							if (newCaretStart < maxlength) {
+								isSetFocus = true;
+								fields.card_num_fields.eq(i).focus();
+								handlers.caret(fields.card_num_fields[i], newCaretStart, newCaretStart);
+							}
+							newCaretStart -= valLength;
+						}
+						buffer = buffer.slice(maxlength);
+					}
+				}
+				if (!isSetFocus) {
+					// setTimeout may be necessary for chrome and safari (https://bugs.webkit.org/show_bug.cgi?id=56271)
+					fields.card_num_fields.eq(i).focus();
+					handlers.caret(fields.card_num_fields[i], newCaretStart, newCaretStart);
+				}
+			}
+		},	
+		/**
+		 * позиционирование коретки курсора в поле и плавный переход между полями
+		 * для полей карты
+		 * 
+		 * @param {type} e
+		 * @returns {undefined}
+		 */
+		reposition_caret_on_card_num_fields: function (e) {
+			var eventType = e.type,
+				options = e.data,
+				element = e.data.element,
+				index = e.data.index,
+				caretPos;
+
+			if (isOpera) { // last check 12
+				if (eventType === 'keypress') {
+					eventType = 'keydown';
+				}
+			}
+
+			var LEFT_CODE = 37,
+				BACKSPACE_CODE = 8,
+				DELETE_CODE = 46,
+				RIGHT_CODE = 39;
+
+				if (eventType === 'keydown' && e.keyCode === RIGHT_CODE) {
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === this.value.length && // caret is last
+						index !== fields.card_num_fields.length - 1 // input is no last
+					) {
+						fields.card_num_fields.eq(index + 1).focus();
+						handlers.caret(fields.card_num_fields[index + 1], 0, 0);
+						e.preventDefault(); // no next motion
+					}
+				}
+				if (eventType === 'keydown' && (e.keyCode === BACKSPACE_CODE || e.keyCode === LEFT_CODE)) {
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === caretPos.end &&
+						caretPos.start === 0 && // caret is first
+						index !== 0 // input is no first
+					) {
+						var toFocus = fields.card_num_fields.eq(index - 1),
+							lengthToFocus = toFocus.val().length;
+						toFocus.focus();
+						handlers.caret(toFocus[0], lengthToFocus, lengthToFocus);
+						if (e.keyCode === LEFT_CODE) {
+							e.preventDefault(); // no next motion
+						}
+					}
+				}
+				if (eventType === 'keyup' ||
+					eventType === 'keydown') { // repeat in FF10, Webkit, IE
+				//case 'keypress': // repeat in FF10, Opera 11
+					// ignore system key. ex. shift
+					if (e.keyCode < 48) {
+						return;
+					}
+
+					// ignore ctrl + any key
+					if (eventType === 'keyup' && options.ignoreNextKeyup) {
+						options.ignoreNextKeyup = false;
+						return;
+					}
+					if (e.metaKey) {
+						// metaKey is ignored in browsers on keyup
+						options.ignoreNextKeyup = true;
+						return;
+					}
+
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === caretPos.end &&
+						caretPos.start === this.value.length && // caret is last
+						index !== fields.card_num_fields.length - 1 && // input is no last
+						this.value.length === options.maxlength
+					) {
+						fields.card_num_fields.eq(index + 1).focus();
+						handlers.caret(fields.card_num_fields[index + 1], 0, 0);
+					}
+				}
+				if (eventType === 'paste') {
+					element.attr(MAXLENGTH_ATTRIBUTE, fields.card_num_fields_total_lengths);
+				}
+	/*            case 'keypress':
+					element.attr(MAXLENGTH_ATTRIBUTE, options.maxlength + 1);
+					break;*/
+				if (eventType === 'propertychange' || // IE8
+					eventType === 'input') { // webkit set cursor position as [00|11112]
+					// after paste
+					if (element.attr(MAXLENGTH_ATTRIBUTE) !== options.maxlength) {
+						// Chrome fix
+						setTimeout(function() {
+							handlers.after_paste_on_card_num_fields(element, options);
+							element.attr(MAXLENGTH_ATTRIBUTE, options.maxlength);
+						}, 0);
+					}
+				}
+				if (eventType === 'input' && isOpera) {
+					handlers.after_paste_on_card_num_fields(element, options);
+				}
+		},	
+		card_num_fields: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
+			this.value = this.value.replace(/[^0-9]/g, "");
+
+			var cardNum = '';
+			fields.card_num_fields.each(function(i) {
+				cardNum += $(this).val();	
+			});
+				
+			if(cardNum.length >= settings.min_card_number_length && cardNum.length <= settings.max_card_number_length)
+				if(validators.card_num( cardNum , settings)) ok_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);					
+			else nothing_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+		},
+		card_num: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			var value = this.value = this.value.replace(/[^0-9 -]/g, "");
 			
 			if(value.length >= settings.min_card_number_length && value.length <= settings.max_card_number_length)
-				if(validators.card_num( value , settings)) ok_seter.card_num.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.card_num.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				if(validators.card_num( value , settings)) ok_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 			else 
-				nothing_seter.card_num.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				nothing_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		},
-		exp_date_fields: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
-			var bSwitchField = false;
+		
+		/**
+		 * обработчик данных при вставке из буфера обмена
+		 * для полей даты истечения срока действия карты
+		 * 
+		 * @param {type} element
+		 * @param {type} options
+		 * @returns {undefined}
+		 */
+		after_paste_on_exp_date_fields: function (element, options) {
+			// for example, inputs value before paste: [00|2 ] [33  ], need paste: 1111
+			// now state: [001111|2] [33  ]
+
+			var firstValue = element[0].value,
+				caretEnd = handlers.caret(element[0]).end, // in webkit start: 2, end: 6
+				left = firstValue.slice(0, caretEnd), // 001111
+				right = firstValue.slice(caretEnd), // 2
+				rightFreeSpace = options.maxlength - right.length, // 3
+				isSetFocus = false,
+				buffer, newCaretStart, i;
+
+			for (i = fields.exp_date_fields.length - 1; i > options.index; i--) {
+				rightFreeSpace += fields.exp_date_field_lengths[i] - fields.exp_date_fields[i].value.length;
+			}
+
+			if (left.length > rightFreeSpace) {
+				left = left.slice(0, rightFreeSpace); // 001111.slice(0, 5)
+				newCaretStart = rightFreeSpace;
+			} else {
+				newCaretStart = caretEnd;
+			}
+
+			if (firstValue.length > options.maxlength) {
+				element[0].value = (left + right).slice(0, options.maxlength); // [0011] [33  ]
+
+				// caret remains on input
+				if (newCaretStart <= options.maxlength) {
+					 handlers.caret(element[0], newCaretStart, newCaretStart);
+					isSetFocus = true;
+				}
+
+				buffer = (left + right).slice(options.maxlength); // 112
+
+				if (buffer.length) {
+					newCaretStart -= Math.min(options.maxlength, left.length);
+					var maxlength, valLength;
+					while (fields.exp_date_fields[++i]) {
+						maxlength = fields.exp_date_field_lengths[i];
+						buffer += fields.exp_date_fields[i].value; // 11233
+
+						fields.exp_date_fields.eq(i)
+							.val(buffer.slice(0, maxlength))
+							.change();
+
+						if (buffer.length <= maxlength) {
+							break;
+						}
+
+						valLength = fields.exp_date_fields[i].value.length;
+
+						if (!isSetFocus) {
+							if (newCaretStart < maxlength) {
+								isSetFocus = true;
+								fields.exp_date_fields.eq(i).focus();
+								handlers.caret(fields.exp_date_fields[i], newCaretStart, newCaretStart);
+							}
+							newCaretStart -= valLength;
+						}
+						buffer = buffer.slice(maxlength);
+					}
+				}
+				if (!isSetFocus) {
+					// setTimeout may be necessary for chrome and safari (https://bugs.webkit.org/show_bug.cgi?id=56271)
+					fields.exp_date_fields.eq(i).focus();
+					handlers.caret(fields.exp_date_fields[i], newCaretStart, newCaretStart);
+				}
+			}
+		},	
+		/**
+		 * позиционирование коретки курсора в поле и плавный переход между полями
+		 * для полей даты истечения срока действия карты
+		 * 
+		 * @param {type} e
+		 * @returns {undefined}
+		 */
+		reposition_caret_on_exp_date_fields: function (e) {
+			var eventType = e.type,
+				options = e.data,
+				element = e.data.element,
+				index = e.data.index,
+				caretPos;
+
+			if (isOpera) { // last check 12
+				if (eventType === 'keypress') {
+					eventType = 'keydown';
+				}
+			}
+
+			var LEFT_CODE = 37,
+				BACKSPACE_CODE = 8,
+				DELETE_CODE = 46,
+				RIGHT_CODE = 39;
+
+				if (eventType === 'keydown' && e.keyCode === RIGHT_CODE) {
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === this.value.length && // caret is last
+						index !== fields.exp_date_fields.length - 1 // input is no last
+					) {
+						fields.exp_date_fields.eq(index + 1).focus();
+						handlers.caret(fields.exp_date_fields[index + 1], 0, 0);
+						e.preventDefault(); // no next motion
+					}
+				}
+				if (eventType === 'keydown' && (e.keyCode === BACKSPACE_CODE || e.keyCode === LEFT_CODE)) {
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === caretPos.end &&
+						caretPos.start === 0 && // caret is first
+						index !== 0 // input is no first
+					) {
+						var toFocus = fields.exp_date_fields.eq(index - 1),
+							lengthToFocus = toFocus.val().length;
+						toFocus.focus();
+						handlers.caret(toFocus[0], lengthToFocus, lengthToFocus);
+						if (e.keyCode === LEFT_CODE) {
+							e.preventDefault(); // no next motion
+						}
+					}
+				}
+				if (eventType === 'keyup' ||
+					eventType === 'keydown') { // repeat in FF10, Webkit, IE
+				//case 'keypress': // repeat in FF10, Opera 11
+					// ignore system key. ex. shift
+					if (e.keyCode < 48) {
+						return;
+					}
+
+					// ignore ctrl + any key
+					if (eventType === 'keyup' && options.ignoreNextKeyup) {
+						options.ignoreNextKeyup = false;
+						return;
+					}
+					if (e.metaKey) {
+						// metaKey is ignored in browsers on keyup
+						options.ignoreNextKeyup = true;
+						return;
+					}
+
+					caretPos = handlers.caret(element[0]);
+					if (
+						caretPos.start === caretPos.end &&
+						caretPos.start === this.value.length && // caret is last
+						index !== fields.exp_date_fields.length - 1 && // input is no last
+						this.value.length === options.maxlength
+					) {
+						fields.exp_date_fields.eq(index + 1).focus();
+						handlers.caret(fields.exp_date_fields[index + 1], 0, 0);
+					}
+				}
+				if (eventType === 'paste') {
+					element.attr(MAXLENGTH_ATTRIBUTE, fields.exp_date_fields_total_lengths);
+				}
+	/*            case 'keypress':
+					element.attr(MAXLENGTH_ATTRIBUTE, options.maxlength + 1);
+					break;*/
+				if (eventType === 'propertychange' || // IE8
+					eventType === 'input') { // webkit set cursor position as [00|11112]
+					// after paste
+					if (element.attr(MAXLENGTH_ATTRIBUTE) !== options.maxlength) {
+						// Chrome fix
+						setTimeout(function() {
+							handlers.after_paste_on_exp_date_fields(element, options);
+							element.attr(MAXLENGTH_ATTRIBUTE, options.maxlength);
+						}, 0);
+					}
+				}
+				if (eventType === 'input' && isOpera) {
+					handlers.after_paste_on_exp_date_fields(element, options);
+				}
+		},	
+		exp_date_fields: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			if(fields.exp_date_type === 'input'){
 				this.value = this.value.replace(/[^0-9]/g, "");
-			
-				if($(this).attr('name') === "exp_month" && this.value.length >= 2)
-					bSwitchField = true;
 			}
 			
-			var strExpDate = '';
-			for(var n in fields.exp_date_fields) {
-				if(fields.exp_date_type === 'input' && bSwitchField
-						&& fields.exp_date_fields[n].attr('name') !== 'exp_year')
-					fields.exp_date_fields[n].focus();
-				value = fields.exp_date_fields[n].val();
-				strExpDate = strExpDate === '' ? value : strExpDate + '/' + value.substring(2,4);  
-			}
-			
-			if(strExpDate.length >= 5)
-				if(validators.exp_date( strExpDate , settings)) ok_seter.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-			else nothing_seter.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+			var expireDate = '';
+			fields.exp_date_fields.each(function(i) {
+				var value = $(this).val();
+				var s = value.length - 2;
+				expireDate += (expireDate === '' ? value : '/' + value.substring(s,s+2)); 	
+			});
+						
+			if(expireDate.length >= 5)
+				if(validators.exp_date( expireDate , settings)) ok_setter.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+			else nothing_setter.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		},
-		exp_date: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		exp_date: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			var value = this.value = this.value.replace(/[^0-9 /-]/g, "");
-		
-			value = value.replace(" -", "/");
+			value = value.replace("-", "/");
 			if(value.length >= 5)
-				if(validators.name_on_card( value , settings)) ok_seter.exp_date.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.exp_date.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-			else nothing_seter.exp_date.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				if(validators.exp_date( value , settings)) ok_setter.exp_date.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.exp_date.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+			else nothing_setter.exp_date.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		},
-		name_on_card: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		name_on_card: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			var value = this.value = this.value.replace(/[^A-Za-z -]/g, "");
 			
 			if(value.length >= settings.min_name_on_card_length && value.length <= settings.max_name_on_card_length)
-				if(validators.name_on_card( value , settings)) ok_seter.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-			else nothing_seter.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				if(validators.name_on_card( value , settings)) ok_setter.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+			else nothing_setter.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		},
-		card_cvc: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		card_cvc: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			var value = this.value = this.value.replace(/\D/g, "");
 			
 			if(value.length >= settings.min_card_cvc_length && value.length <= settings.max_card_cvc_length)
-				if(validators.card_cvc( value , settings)) ok_seter.card_cvc.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-				else error_seter.card_cvc.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-			else nothing_seter.card_cvc.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				if(validators.card_cvc( value , settings)) ok_setter.card_cvc.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+				else error_setter.card_cvc.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+			else nothing_setter.card_cvc.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		},
-		sms_code: function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+		sms_code: function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 			var value = this.value = this.value.replace(/\D/g, ""),
 			
 			value = value.replace(/\D/g, "");
 			fields.sms_code.val(value);
 			
 			if(value.length == SMS_CODE_LENGTH)
-				if(validators.sms_code( value, settings )) ok_seter.sms_code.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);	
-				else error_seter.sms_code.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-			else nothing_seter.sms_code.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+				if(validators.sms_code( value, settings )) ok_setter.sms_code.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+				else error_setter.sms_code.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+			else nothing_setter.sms_code.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 		}
 	};
 	var repliers = {
@@ -645,17 +1054,21 @@ jQuery.extend({
 				if(typeof fields.card_num !== 'undefined') {
 					arr.card_num = fields.card_num.val();
 				}
-				else if(Object.keys(fields.card_num_fields).length){
-					for(var n in fields.card_num_fields) 
-						arr[fields.card_num_fields[n].attr('name')] = fields.card_num_fields[n].val();
+				else if(typeof fields.card_num_fields !== 'undefined'){				
+					fields.card_num_fields.each(function(i) {
+						var element = $(this);
+						arr[element.attr('name')] = element.val();	
+					});
 				}
 				
 				if(typeof fields.exp_date !== 'undefined') {
-					arr.exp_date = fields.card_num.val();
+					arr.exp_date = fields.exp_date.val();
 				}
-				else if(Object.keys(fields.exp_date_fields).length){
-					for(var n in fields.exp_date_fields) 
-						arr[fields.exp_date_fields[n].attr('name')] = fields.exp_date_fields[n].val();
+				else if(typeof fields.exp_date_fields !== 'undefined'){
+					fields.exp_date_fields.each(function(i) {
+						var element = $(this);
+						arr[element.attr('name')] = element.val();	
+					});
 				}
 				
 				if(fields.hash_code.val() !== '')
@@ -674,31 +1087,30 @@ jQuery.extend({
 		handle_card_data_errors : function( arr_fields ) { 		
 				var data = this.data(PLUGIN_NAME);
 				if(arr_fields.form)
-					error_seter.form.apply(this, [data, arr_fields.form, forms, fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+					error_setter.form.apply(this, [data, arr_fields.form, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 
 				if(arr_fields.card_num){
 					if(typeof fields.card_num !== 'undefined') 
-						error_seter.card_num.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-					else if(fields.card_num_fields.length)
-						error_seter.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+						error_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+					else if(typeof fields.card_num_fields !== 'undefined')
+						error_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 				}
 				
 				if(arr_fields.card_cvc)
-					error_seter.card_cvc.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+					error_setter.card_cvc.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 				
 				if(arr_fields.exp_date){
 					if(typeof fields.exp_date !== 'undefined') 
-						error_seter.exp_date.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-					else if(fields.exp_date_fields.length)
-						error_seter.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+						error_setter.exp_date.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+					else if(typeof fields.exp_date_fields !== 'undefined')
+						error_setter.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 				}
 				
 				if(arr_fields.name_on_card)
-					error_seter.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+					error_setter.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 	
 				if(arr_fields.sms_code)
-					error_seter.sms_code.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-					
+					error_setter.sms_code.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
 			}
 	};
 
@@ -709,18 +1121,18 @@ jQuery.extend({
 			 * Совмещаем настройки
 			 */
 			settings = $.extend( default_settings, override_options);
-			if(Object.keys(settings.ok_seter).length > 0)
-				for(var strFunctionName in settings.ok_seter)
-					if(typeof settings.ok_seter[strFunctionName] === 'function' && typeof ok_seter[strFunctionName] === 'function')
-						ok_seter[strFunctionName] = settings.ok_seter[strFunctionName];
-			if(Object.keys(settings.error_seter).length > 0)
-				for(var strFunctionName in settings.error_seter)
-					if(typeof settings.error_seter[strFunctionName] === 'function' && typeof error_seter[strFunctionName] === 'function')
-						error_seter[strFunctionName] = settings.error_seter[strFunctionName];
-			if(Object.keys(settings.nothing_seter).length > 0)
-				for(var strFunctionName in settings.nothing_seter)
-					if(typeof settings.nothing_seter[strFunctionName] === 'function' && typeof nothing_seter[strFunctionName] === 'function')
-						nothing_seter[strFunctionName] = settings.nothing_seter[strFunctionName];
+			if(Object.keys(settings.ok_setter).length > 0)
+				for(var strFunctionName in settings.ok_setter)
+					if(typeof settings.ok_setter[strFunctionName] === 'function' && typeof ok_setter[strFunctionName] === 'function')
+						ok_setter[strFunctionName] = settings.ok_setter[strFunctionName];
+			if(Object.keys(settings.error_setter).length > 0)
+				for(var strFunctionName in settings.error_setter)
+					if(typeof settings.error_setter[strFunctionName] === 'function' && typeof error_setter[strFunctionName] === 'function')
+						error_setter[strFunctionName] = settings.error_setter[strFunctionName];
+			if(Object.keys(settings.nothing_setter).length > 0)
+				for(var strFunctionName in settings.nothing_setter)
+					if(typeof settings.nothing_setter[strFunctionName] === 'function' && typeof nothing_setter[strFunctionName] === 'function')
+						nothing_setter[strFunctionName] = settings.nothing_setter[strFunctionName];
 			if(Object.keys(settings.validators).length > 0)
 				for(var strFunctionName in settings.validators)
 					if(typeof settings.validators[strFunctionName] === 'function' && typeof validators[strFunctionName] === 'function')
@@ -829,7 +1241,7 @@ jQuery.extend({
 					methods.init_card_input_form.apply($form);
 				else if(settings.form_type === 'loader_form')
 					methods.init_loader_form.apply($form);
-				else if(settings.form_type === 'only_sms_chack_form')
+				else if(settings.form_type === 'only_sms_check_form')
 					methods.init_loader_form.apply($form);
 				
 				var 
@@ -874,133 +1286,131 @@ jQuery.extend({
 			var  $card_input_form = $(this);
 			/*
 			 * Определение набора полей и привяска реакции на события 
-			 */
-			var 
-				$objCardNum = $("input[name="+NAME_CARD_INPUT_FORM_CARD_NUM_FIELD+"]", $card_input_form),
-				$objCardNum_1 = $("input[name="+NAME_CARD_INPUT_FORM_CARD_NUM_1_FIELD+"]", $card_input_form),
-				$objCardNum_2 = $("input[name="+NAME_CARD_INPUT_FORM_CARD_NUM_2_FIELD+"]", $card_input_form),
-				$objCardNum_3 = $("input[name="+NAME_CARD_INPUT_FORM_CARD_NUM_3_FIELD+"]", $card_input_form),
-				$objCardNum_4 = $("input[name="+NAME_CARD_INPUT_FORM_CARD_NUM_4_FIELD+"]", $card_input_form);		
-			if($objCardNum.size() > 0) {
-				$objCardNum
+			 */	
+			fields.card_num = fields.card_num_fields = $("input[name^="+NAME_CARD_INPUT_FORM_CARD_NUM_FIELD+"]", $card_input_form);	
+			if(fields.card_num_fields.length === 1) {
+				fields.card_num_fields = undefined;
+				fields.card_num
 					.attr({
 						'autocomplete': 'off'
 					})
 					.keyup(
 						function (e) {
 							e.preventDefault();
-							handlers.card_num.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+							handlers.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 						});
-				fields.card_num = $objCardNum;
 			}
-			else if($objCardNum_1.size() > 0 && $objCardNum_2.size() > 0 && $objCardNum_3.size() > 0 && $objCardNum_4.size() > 0) {
-				$objCardNum_1
-					.attr({
-						'autocomplete': 'off'
-					})
-					.keyup(
-						function (e) {
+			else if(fields.card_num_fields.length > 1) {
+				fields.card_num = undefined;
+				fields.card_num_fields.each(function(i) {
+					var element = $(this),
+						maxlength = +element.attr(MAXLENGTH_ATTRIBUTE);
+
+					fields.card_num_fields_total_lengths += maxlength;
+					fields.card_num_field_lengths.push(maxlength);
+
+					element
+						.attr({
+							'autocomplete': 'off'
+						})
+						.on('keydown keypress keyup input paste propertychange', {
+							element: element,
+							index: i,
+							maxlength: maxlength
+						}, handlers.reposition_caret_on_card_num_fields)
+						.keyup (function (e) {
 							e.preventDefault();
-							handlers.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				$objCardNum_2
-					.attr({
-						'autocomplete': 'off'
-					})
-					.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				$objCardNum_3
-					.attr({
-						'autocomplete': 'off'
-					})
-					.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				$objCardNum_4
-					.attr({
-						'autocomplete': 'off'
-					})
-					.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.card_num_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				fields.card_num_fields = [$objCardNum_1, $objCardNum_2, $objCardNum_3, $objCardNum_4]
+							handlers.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+						}
+					);
+				});
 			}
 			else
 				console.log('Невозможно инициализировать форму, не удается определить поля для ввода номера банковской карты');
 
 			var 
-				$objExpDate = $("input[name="+NAME_CARD_INPUT_FORM_EXP_DATE_FIELD+"]", $card_input_form),
-				$objInputExpMonth = $("input[name="+NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD+"]", $card_input_form),
-				$objInputExpYear = $("input[name="+NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD+"]", $card_input_form),
-				$objSelectExpMonth = $("select[name="+NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD+"]", $card_input_form),
-				$objSelectExpYear = $("select[name="+NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD+"]", $card_input_form);	
+				$expireDateInputs = $("input[name="+NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD+"], input[name="+NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD+"]", $card_input_form),
+				$expireDateSelectors = $("select[name="+NAME_CARD_INPUT_FORM_EXP_MONTH_FIELD+"], select[name="+NAME_CARD_INPUT_FORM_EXP_YEAR_FIELD+"]", $card_input_form)	;	
 
-			if($objExpDate.size() > 0) {
-				$objExpDate.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.exp_date.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				fields.exp_date = $objExpDate;
+			fields.exp_date = $("input[name="+NAME_CARD_INPUT_FORM_EXP_DATE_FIELD+"]", $card_input_form);
+			if(fields.exp_date.length === 1) {
+				fields.exp_date_fields = undefined;
+				fields.exp_date
+					.attr({
+						'autocomplete': 'off'
+					})
+					.keyup(
+					function (e) {
+						e.preventDefault();
+						handlers.exp_date.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+					});
 				fields.exp_date_type = 'input';
 			}
-			else if($objInputExpMonth.size() > 0 && $objInputExpYear.size() > 0) {
-				$objInputExpMonth.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				$objInputExpYear.keyup(
-						function (e) {
-							e.preventDefault();
-							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				fields.exp_date_fields = [$objInputExpMonth, $objInputExpYear];
+			else if($expireDateInputs.length === 2) {
+				fields.exp_date = undefined;
+				fields.exp_date_fields = $expireDateInputs;
 				fields.exp_date_type = 'input';
+				fields.exp_date_fields.each(function(i) {
+					var element = $(this),
+						maxlength = +element.attr(MAXLENGTH_ATTRIBUTE);
+
+					fields.exp_date_fields_total_lengths += maxlength;
+					fields.exp_date_field_lengths.push(maxlength);
+
+					element
+						.attr({
+							'autocomplete': 'off'
+						})
+						.on('keydown keypress keyup input paste propertychange', {
+							element: element,
+							index: i,
+							maxlength: maxlength
+						}, handlers.reposition_caret_on_exp_date_fields)
+						.keyup (function (e) {
+							e.preventDefault();
+							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+						}
+					);
+				});
 			}
-			else if($objSelectExpMonth.size() > 0 && $objSelectExpYear.size() > 0) {
-				$objSelectExpMonth.change(
-						function (e) {
-							e.preventDefault();
-							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				$objSelectExpYear.change(
-						function (e) {
-							e.preventDefault();
-							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						});
-				fields.exp_date_fields = [$objSelectExpMonth, $objSelectExpYear];
+			else if($expireDateSelectors.length === 2) {
+				fields.exp_date = undefined;
+				fields.exp_date_fields = $expireDateSelectors;
 				fields.exp_date_type = 'select';
+				fields.exp_date_fields.each(function(i) {
+					var element = $(this);
+
+					element
+						.change(function (e) {
+							e.preventDefault();
+							handlers.exp_date_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+						}
+					);
+				});
 			}
 			else
 				console.log('Невозможно инициализировать форму, не удается определить поля для даты истечения банковской карты');
 
-			var $objNameOnCard = $("input[name="+NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD+"]", $card_input_form);
-			if($objNameOnCard.size() > 0) {
-				$objNameOnCard.keyup(
+			fields.name_on_card = $("input[name="+NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD+"]", $card_input_form);
+			if(fields.name_on_card.length === 1) {
+				fields.name_on_card
+					.keyup(
 						function (e) {
 							e.preventDefault();
-							handlers.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
-						}).change(
+							handlers.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+						})
+					.change(
 						function (e) {
 							e.preventDefault();
-							handlers.name_on_card.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+							handlers.name_on_card.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 						});
-				fields.name_on_card = $objNameOnCard;
 			}
 			else
 				console.log('Невозможно инициализировать форму, не удается определить поля для имени владельца карты');
 
-			var $objCardCvc = $("input[name="+NAME_CARD_INPUT_FORM_CARD_CVC_FIELD+"]", $card_input_form);
-			if($objCardCvc.size() > 0) {
-				$objCardCvc
+			fields.card_cvc = $("input[name="+NAME_CARD_INPUT_FORM_CARD_CVC_FIELD+"]", $card_input_form);
+			if(fields.card_cvc.length === 1) {
+				fields.card_cvc
 					.attr({
 						'maxlength' : settings.max_card_cvc_length,
 						'autocomplete': 'off'
@@ -1008,22 +1418,21 @@ jQuery.extend({
 					.keyup(
 						function (e) {
 							e.preventDefault();
-							handlers.card_cvc.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+							handlers.card_cvc.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 						});
-				fields.card_cvc = $objCardCvc;
 			}
 			else
 				console.log('Невозможно инициализировать форму, не удается определить поля для cvc карты');
 
 			var	hash_field = $('<input>')
-						.attr({
-							'type': "text",
-							'class': 'hash-code',
-							'name': NAME_CARD_INPUT_FORM_HASH_CODE_FIELD,
-						})
-						.css({
-							'display': "none"
-						});
+				.attr({
+					'type': "text",
+					'class': 'hash-code',
+					'name': NAME_CARD_INPUT_FORM_HASH_CODE_FIELD,
+				})
+				.css({
+					'display': "none"
+				});
 
 			//
 			// Нажатие кнопки оплаты
@@ -1039,7 +1448,7 @@ jQuery.extend({
 					});
 
 			var $code_input_form_hash_code_field = $('.hash-code' , $card_input_form)
-			if($code_input_form_hash_code_field.size() > 0) {
+			if($code_input_form_hash_code_field.length === 1) {
 				fields.hash_code = hash_field;
 			}
 			else
@@ -1131,7 +1540,7 @@ jQuery.extend({
 				$code_input_form_sms_code_field.keyup(
 						function (e) {
 							e.preventDefault();
-							handlers.sms_code.apply(this, [fields, validators, settings, ok_seter, error_seter, nothing_seter]);
+							handlers.sms_code.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 						});
 				fields.sms_code = $code_input_form_sms_code_field;
 			}
@@ -1258,7 +1667,6 @@ jQuery.extend({
 				$(window).removeData(PLUGIN_NAME);
 			})
 		},
-
 
 		get_action: function() {
 			return this.each(function(){
@@ -1406,11 +1814,30 @@ jQuery.extend({
 
 	$.fn.card_payment_form = function( method ) {
 
-		if ( methods[method] ) {
-			return methods[method].apply( this, Array.prototype.slice.call( arguments, 1 ));
-		} else if ( typeof method === 'object' || ! method ) {
-			return methods.init.apply( this, arguments );
-		} else {
+		// iOS does not support input.focus()
+		if (/iPad|iPhone/.test(navigator.platform)) {
+			return this;
+		}
+
+		if ( methods[method] ) {	
+			var _return = methods[method].apply( this, Array.prototype.slice.call( arguments, 1 ));
+			// opera not support paste event
+			if (isOpera) {
+				if(typeof fields.card_num_fields !== undefined) fields.card_num_fields.attr(MAXLENGTH_ATTRIBUTE, fields.card_num_fields_total_lengths);
+				if(typeof fields.exp_date_fields !== undefined) fields.exp_date_fields.attr(MAXLENGTH_ATTRIBUTE, fields.exp_date_fields_total_lengths);
+			}
+			return _return;
+		} 
+		else if ( typeof method === 'object' || ! method ) {
+			var _return = methods.init.apply( this, arguments );
+			// opera not support paste event
+			if (isOpera) {
+				if(typeof fields.card_num_fields !== undefined) fields.card_num_fields.attr(MAXLENGTH_ATTRIBUTE, fields.card_num_fields_total_lengths);
+				if(typeof fields.exp_date_fields !== undefined) fields.exp_date_fields.attr(MAXLENGTH_ATTRIBUTE, fields.exp_date_fields_total_lengths);
+			}
+			return _return;
+		} 
+		else {
 			$.error( 'Метод с именем ' +  method + ' не существует для jQuery.card_payment_form' );
 		}    
 

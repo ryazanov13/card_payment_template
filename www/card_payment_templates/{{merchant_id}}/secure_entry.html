@@ -40,11 +40,18 @@
  */ 
 //			'accepted_card_brands' : ['{{accepted_card_brands}}'],					
 			'accepted_card_brands' : ['VISA','MASTERCARD'],
-			'ok_seter': {	
+			'ok_seter': {
+				form : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
+					console.log('from: status ok');
+					data['info_form'].removeClass("field-error").addClass("field-ok");
+					fields.message.text('');
+					forms.show_form.apply( this , [ID_INFO_FORM]);
+				},
 				'card_num_fields' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
 					console.log('card_num_fields: status ok');
-					for(var n in fields.card_num_fields)
-						fields.card_num_fields[n].removeClass("field-error").addClass("field-ok");	
+					fields.card_num_fields.each(function(i) {
+						$(this).removeClass("field-error").addClass("field-ok");	
+					});	
 				},
 				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
 					console.log('card_num: status ok');
@@ -76,11 +83,11 @@
 					fields.message.text(text);
 					forms.show_form.apply( this , [ID_INFO_FORM]);
 				},
-				'card_num_fields' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num_fields' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num_fields: status error');
-					alert('Ошибка в номере карты');
-					for(var n in fields.card_num_fields)
-						fields.card_num_fields[n].removeClass("field-ok").addClass("field-error");		
+					fields.card_num_fields.each(function(i) {
+						$(this).removeClass("field-ok").addClass("field-error");	
+					});
 				},
 				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
 					console.log('card_num: status error');
@@ -107,20 +114,22 @@
 */
 			},
 			'nothing_seter' : {
-				'card_num_fields' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'form' : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
+					console.log('from: status nothing');
+					data['info_form'].removeClass("field-error").removeClass("field-ok");
+					fields.message.text('');
+					forms.show_form.apply( this , [ID_INFO_FORM]);
+				},
+				'card_num_fields' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num_fields: status nothing');
-					for(var n in fields.card_num_fields) 
-						fields.card_num_fields[n].removeClass("field-ok").removeClass("field-error");
+					fields.card_num_fields.each(function(i) {
+						$(this).removeClass("field-ok").removeClass("field-error");
+					});
 				},
 				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
 					console.log('card_num: status nothing');
 					fields.card_num.removeClass("field-ok").removeClass("field-error");
 				},
-				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
-					console.log('exp_date_fields: status nothing');
-					for(var n in fields.exp_date_fields) 
-						fields.exp_date_fields[n].removeClass("field-ok").removeClass("field-error");
-				}
 				
 /*
  * Используются выставления состояния в полях, когда они не заполнены
@@ -139,45 +148,28 @@
 */
 			},
 			'handlers' : {															
-				'card_num_fields': function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
-					var nSwitchToField = undefined;
+				'card_num_fields': function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					this.value = this.value.replace(/[^0-9]/g, "");
 
-					var nFieldNumber = $(this).attr('name').replace('card_num_','');
-					if(this.value.length >= 4 && (
-							nFieldNumber === '1' 
-							|| nFieldNumber === '2' 
-							|| nFieldNumber === '3'))
-						nSwitchToField = parseInt(nFieldNumber)+1;
-					else if(this.value.length <= 0 && (
-							nFieldNumber === '2' 
-							|| nFieldNumber === '3' 
-							|| nFieldNumber === '4'))
-						nSwitchToField = parseInt(nFieldNumber)-1;
+					var cardNum = '';
+					fields.card_num_fields.each(function(i) {
+						cardNum += $(this).val();	
+					});
 
-					//
-					var strCardNum = '';
-					for(var n in fields.card_num_fields) {
-						if(parseInt(fields.card_num_fields[n].attr('name').replace('card_num_','')) === nSwitchToField)
-							fields.card_num_fields[n].focus();
-						value = fields.card_num_fields[n].val();
-						strCardNum = strCardNum + value;  
-					}
-
-					if(strCardNum.length >= settings.min_card_number_length && strCardNum.length <= settings.max_card_number_length)
-						if(validators.card_num( strCardNum , settings )) ok_seter.card_num_fields(fields, validators, settings, ok_seter, error_seter, nothing_seter);	
-						else error_seter.card_num_fields(fields, validators, settings, ok_seter, error_seter, nothing_seter);					
-					else nothing_seter.card_num_fields(fields, validators, settings, ok_seter, error_seter, nothing_seter);
+					if(cardNum.length >= settings.min_card_number_length && cardNum.length <= settings.max_card_number_length)
+						if(validators.card_num( cardNum , settings)) ok_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+						else error_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);					
+					else nothing_setter.card_num_fields.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 				},
-				'card_num': function(fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num': function(fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					var value = this.value = this.value.replace(/[^0-9 -]/g, "");
 
 					if(value.length >= settings.min_card_number_length && value.length <= settings.max_card_number_length)
-						if(validators.card_num( value , settings )) ok_seter.card_num(fields, validators, settings, ok_seter, error_seter, nothing_seter);	
-						else error_seter.card_num(fields, validators, settings, ok_seter, error_seter, nothing_seter);
+						if(validators.card_num( value , settings)) ok_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);	
+						else error_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
 					else 
-						nothing_seter.card_num(fields, validators, settings, ok_seter, error_seter, nothing_seter);
-				}		
+						nothing_setter.card_num.apply(this, [fields, validators, settings, ok_setter, error_setter, nothing_setter]);
+				},
 /*
  * Срабатывают по событию keyip
  * 
@@ -189,22 +181,24 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
+				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
 				exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
 				name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
 				card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {}
 */
 			},
 			'validators' : {		
-				'card_num': function(strCardNumber, settings) {
-					if (/[^0-9 -]+/.test(strCardNumber))		
+				'card_num': function( cardNumber, settings) {
+					// accept only spaces, digits and dashes
+					if (/[^0-9 -]+/.test(cardNumber))		
 						return false;
 
-					strCardNumber = strCardNumber.replace(/\D/g, "");			
-					if(strCardNumber.length < settings.min_card_number_length || strCardNumber.length >  settings.max_card_number_length)
+					cardNumber = cardNumber.replace(/\D/g, "");			
+					if(cardNumber.length < settings.min_card_number_length || cardNumber.length >  settings.max_card_number_length)
 						return false;
-					
-					return true;	
-				}					
+
+					return true;
+				},				
 /*
  * Валидаторы данных полей
  * 
@@ -214,6 +208,7 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
+				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
 				exp_date : function (strExpDate, settings) {},
 				name_on_card : function (strNameOnCard, settings) {},
 				card_cvc : function (strCardCvc, settings) {}
@@ -299,7 +294,7 @@
 							<p><input type="text" class="card-num" id="card_num_1" name="card_num_1"  maxlength=4 autocomplete="off"/></p>
 							<p><input type="text" class="card-num" id="card_num_2" name="card_num_2"  maxlength=4 autocomplete="off"/></p>
 							<p><input type="text" class="card-num" id="card_num_3" name="card_num_3"  maxlength=4 autocomplete="off"/></p>
-							<p><input type="text" class="card-num" id="card_num_4" name="card_num_4"  maxlength=4 autocomplete="off"/></p>
+							<p><input type="text" class="card-num" id="card_num_4" name="card_num_4"  maxlength=7 autocomplete="off"/></p>
 							
 							<div class="card-title">Укажите срок действия карты</div>
 							<p><select class="card-date" name="exp_month">
