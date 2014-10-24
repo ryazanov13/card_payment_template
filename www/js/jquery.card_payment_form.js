@@ -1814,11 +1814,6 @@ jQuery.extend({
 
 	$.fn.card_payment_form = function( method ) {
 
-		// iOS does not support input.focus()
-		if (/iPad|iPhone/.test(navigator.platform)) {
-			return this;
-		}
-
 		if ( methods[method] ) {	
 			var _return = methods[method].apply( this, Array.prototype.slice.call( arguments, 1 ));
 			// opera not support paste event
