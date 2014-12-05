@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Платрон - универсальная система приема платежей на сайте. Система электронных платежей для интернет магазинов. ::  Оплата с банковской картой</title>
+	<!--Здесь сохраняем адресацию до файла-->
+	<link rel="stylesheet" type="text/css" href="css/style.css" />
+	<link rel="stylesheet" type="text/css" href="css/ministyle.css" />
+	<link rel="stylesheet" type="text/css" href="css/jquery-ui.css" />
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<script type="text/javascript" src="js/jquery-ui.js"></script>
+	<script type="text/javascript" src="js/js.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="css/card_payment_form.css" />	
+	<script type="text/javascript" src="js/jquery.card_payment_form.js"></script>
+	<!--/Здесь сохраняем адресацию до файла-->
+	
+	<!--Здесь ваши собственные стили и скрипты-->
+	<!--<link rel="stylesheet" type="text/css" href="merchant_templates/{{merchant_id}}/your_style/style.js"></link>-->
+	<!--script type="text/javascript" src="merchant_templates/{{merchant_id}}/your_js/js.js"></script-->
+	<!--/Здесь ваши собственные стили и скрипты-->
+	<script type="text/javascript">
+	$(document).ready(function() {
+		
+		$('div#card_input_form').card_payment_form({
+			'form_type' : 'loader_form'
+		});
+	});
+	</script>
+</head>
+<body {{_onload}}>
+    <div class="main">
+		<div class="wizard">
+			<div class="wizard-step1">
+				
+				<!--- --->
+
+				<h1>Оплата банковской картой</h1>
+
+				<div id="waiter_form">
+					<div id="info_by_idle_transaction">
+						<p>&nbsp;</p>
+						<p align="center">Дождитесь завершения операции оплаты по банковской карте. По окончанию вы будете перенаправлены на сайт магазина, где завершите процесс покупки.</p>
+						<p>&nbsp;</p>
+						<p id="spiner" align="center"><img src="images/spin.gif"></p>
+					</div>
+					<div id="info_by_hold_transaction">
+						<p>&nbsp;</p>
+						<p align="center">Обработка платежа задерживается по неизвестным причинам, просим отслеживать статус платежа в личном кабинете магазина или обратиться в службу поддержки.</p>
+					</div>
+				</div>
+				<div class="c"></div>
+
+				<!--- --->
+				
+				<div class="push"></div>
+			</div><!--end .main -->
+		</div>
+	</div>
+</body>
+</html>
