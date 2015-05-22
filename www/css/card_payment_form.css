@@ -45,7 +45,7 @@
  */
 .card_input_form {}
 .card-left{background:url(../images/cart.png) no-repeat 0 0 #f3f4f5; width:363px; height:250px; float:left; margin:0 0 30px; padding:0 1px; font-size:12px; overflow:hidden; }
-.card-left-table td{padding:5px 5px;}
+.card-left-table td{padding:5px 3px;}
 .card-right{background:url(../images/cart.png) no-repeat 0 0; width:363px; height:230px; float:right; margin:0 0 30px; padding:20px 1px 0; overflow:hidden}
 .card-right-line{background:#dbdddc; height:50px;}
 .card-right-table{font-size:12px; float:right; color:#666;}
