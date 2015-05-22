@@ -1181,7 +1181,8 @@ jQuery.extend({
 					var min_card_number_length = undefined, max_card_number_length = undefined;
 					for(var n in settings.accepted_card_brands){
 						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'VISA' ||
-							settings.accepted_card_brands[n] === 'VISA ELECTRON' || settings.accepted_card_brands[n] === 'DISCOVER') {	
+							settings.accepted_card_brands[n] === 'VISA ELECTRON' || settings.accepted_card_brands[n] === 'DISCOVER'
+                                                        || settings.accepted_card_brands[n] === 'JCB') {	
 							min_card_number_length = min_card_number_length > 16 || typeof min_card_number_length == 'undefined' ? 16 : min_card_number_length;
 							max_card_number_length = max_card_number_length < 16 || typeof max_card_number_length == 'undefined' ? 16 : max_card_number_length;
 						}
@@ -1207,7 +1208,8 @@ jQuery.extend({
 					for(var n in settings.accepted_card_brands){
 						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'MAESTRO' || 
 							settings.accepted_card_brands[n] === 'VISA' || settings.accepted_card_brands[n] === 'VISA ELECTRON' ||
-							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER') {
+							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER'
+                                                        || settings.accepted_card_brands[n] === 'JCB') {
 							min_card_cvc_length = min_card_cvc_length > 3 || typeof min_card_cvc_length == 'undefined' ? 3 : min_card_cvc_length;
 							max_card_cvc_length = max_card_cvc_length < 3 || typeof max_card_cvc_length == 'undefined' ? 3 : max_card_cvc_length;
 						}
@@ -1224,7 +1226,8 @@ jQuery.extend({
 					for(var n in settings.accepted_card_brands){
 						if(settings.accepted_card_brands[n] === 'MASTERCARD' || settings.accepted_card_brands[n] === 'MAESTRO' || 
 							settings.accepted_card_brands[n] === 'VISA' || settings.accepted_card_brands[n] === 'VISA ELECTRON' ||
-							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER') {
+							settings.accepted_card_brands[n] === 'DINERS CLUB'  || settings.accepted_card_brands[n] === 'DISCOVER'
+                                                        || settings.accepted_card_brands[n] === 'JCB') {
 							min_name_on_card_length = min_name_on_card_length > 3 || typeof min_name_on_card_length == 'undefined' ? 3 : min_name_on_card_length;
 							max_name_on_card_length = max_name_on_card_length < 27 || typeof max_name_on_card_length == 'undefined' ? 27 : max_name_on_card_length;
 						}
