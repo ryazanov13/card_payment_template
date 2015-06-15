@@ -177,11 +177,11 @@ jQuery.extend({
 				fields.name_on_card.removeClass("field-error").addClass("field-ok");	
 			},
 			card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
-				console.log('name_on_card: status ok');
+				console.log('card_cvc: status ok');
 				fields.card_cvc.removeClass("field-error").addClass("field-ok");						
 			},
 			sms_code : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
-				console.log('name_on_card: status ok');
+				console.log('sms_code: status ok');
 				fields.sms_code.removeClass("field-error").addClass("field-ok");	
 			}
 		},
