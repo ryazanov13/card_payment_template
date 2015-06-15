@@ -47,13 +47,13 @@
 					fields.message.text('');
 					forms.show_form.apply( this , [ID_INFO_FORM]);
 				},
-				'card_num_fields' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num_fields' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num_fields: status ok');
 					fields.card_num_fields.each(function(i) {
 						$(this).removeClass("field-error").addClass("field-ok");	
 					});	
 				},
-				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num: status ok');
 					fields.card_num.addClass("field-ok").removeClass("field-error");
 				}
@@ -69,14 +69,14 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
-				'exp_date_fields' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				'exp_date' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				'name_on_card' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				'card_cvc' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {}
+				'exp_date_fields' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				'exp_date' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				'name_on_card' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				'card_cvc' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {}
 */
 			},
-			'error_seter': {
-				'form' : function (data, text, forms, fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+			'error_setter': {
+				'form' : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('from: status error');
 					alert('Неправельные натройки формы');
 					data['info_form'].addClass("field-error").removeClass("field-ok");
@@ -89,7 +89,7 @@
 						$(this).removeClass("field-ok").addClass("field-error");	
 					});
 				},
-				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num: status error');
 					alert('Ошибка в номере карты');
 					fields.card_num.removeClass("field-ok").addClass("field-error");
@@ -107,13 +107,13 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
-				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {}
+				exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {}
 */
 			},
-			'nothing_seter' : {
+			'nothing_setter' : {
 				'form' : function (data, text, forms, fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('from: status nothing');
 					data['info_form'].removeClass("field-error").removeClass("field-ok");
@@ -126,7 +126,7 @@
 						$(this).removeClass("field-ok").removeClass("field-error");
 					});
 				},
-				'card_num' : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {
+				'card_num' : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
 					console.log('card_num: status nothing');
 					fields.card_num.removeClass("field-ok").removeClass("field-error");
 				},
@@ -142,9 +142,9 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
-				exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {}
+				exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {}
 */
 			},
 			'handlers' : {															
@@ -181,10 +181,10 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
-				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				exp_date : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				name_on_card : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
-				card_cvc : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {}
+				exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				exp_date : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				name_on_card : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
+				card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {}
 */
 			},
 			'validators' : {		
@@ -208,7 +208,7 @@
  * card_cvc - Поле для ввода cvc/cvv2
  * 
 				,
-				exp_date_fields : function (fields, validators, settings, ok_seter, error_seter, nothing_seter) {},
+				exp_date_fields : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {},
 				exp_date : function (strExpDate, settings) {},
 				name_on_card : function (strNameOnCard, settings) {},
 				card_cvc : function (strCardCvc, settings) {}
