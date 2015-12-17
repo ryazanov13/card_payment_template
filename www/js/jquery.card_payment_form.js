@@ -65,8 +65,6 @@ jQuery.extend({
 	NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD = 'name_on_card',
 	NAME_CARD_INPUT_FORM_CARD_CVC_FIELD = 'card_cvc',
 	
-	NAME_CARD_INPUT_FORM_HASH_CODE_FIELD = 'hash_code',
-	
 	/*
 	 * Поля для формы loader
 	 */
@@ -141,7 +139,6 @@ jQuery.extend({
 			'name_on_card' : undefined,
 			'card_cvc' : undefined,
 			'sms_code' : undefined,
-			'hash_code' : undefined
 		};
 	
 	var 
@@ -177,11 +174,11 @@ jQuery.extend({
 				fields.name_on_card.removeClass("field-error").addClass("field-ok");	
 			},
 			card_cvc : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
-				console.log('card_cvc: status ok');
+				console.log('name_on_card: status ok');
 				fields.card_cvc.removeClass("field-error").addClass("field-ok");						
 			},
 			sms_code : function (fields, validators, settings, ok_setter, error_setter, nothing_setter) {
-				console.log('sms_code: status ok');
+				console.log('name_on_card: status ok');
 				fields.sms_code.removeClass("field-error").addClass("field-ok");	
 			}
 		},
@@ -876,7 +873,6 @@ jQuery.extend({
 	};
 	var repliers = {
 		ok : function(reply) {
-			if(typeof reply.hash_code !== 'undefined') fields.hash_code.val(reply.hash_code);
 			
 			if(reply.message){
 				var data = this.data(PLUGIN_NAME);
@@ -888,7 +884,6 @@ jQuery.extend({
 			return this;
 		},
 		submit : function(reply) {
-			if(typeof reply.hash_code !== 'undefined') fields.hash_code.val(reply.hash_code);
 			
 			$('form', this).unbind('.'+PLUGIN_NAME)
 				.attr({
@@ -899,7 +894,6 @@ jQuery.extend({
 			return this;
 		},
 		reload : function(reply) {
-			if(typeof reply.hash_code !== 'undefined') fields.hash_code.val(reply.hash_code);
 			
 //			if(!reply.message)
 				location.reload();
@@ -908,7 +902,6 @@ jQuery.extend({
 			return this;
 		},
 		show_form : function(reply) {
-			if(typeof reply.hash_code !== 'undefined') fields.hash_code.val(reply.hash_code);
 			if(reply.object) 
 				forms.show_form.apply(this, [reply.object]);
 
@@ -1070,10 +1063,6 @@ jQuery.extend({
 						arr[element.attr('name')] = element.val();	
 					});
 				}
-				
-				if(fields.hash_code.val() !== '')
-					arr.hash = fields.hash_code.val();
-				
 			}	
 			if(step === ID_CODE_INPUT_FORM)
 				arr.sms_code = fields.sms_code.val()
@@ -1427,21 +1416,10 @@ jQuery.extend({
 			else
 				console.log('Невозможно инициализировать форму, не удается определить поля для cvc карты');
 
-			var	hash_field = $('<input>')
-				.attr({
-					'type': "text",
-					'class': 'hash-code',
-					'name': NAME_CARD_INPUT_FORM_HASH_CODE_FIELD,
-				})
-				.css({
-					'display': "none"
-				});
-
 			//
 			// Нажатие кнопки оплаты
 			//
 			$('form',$card_input_form)
-					.append(hash_field)
 					.bind('submit.'+ PLUGIN_NAME, function(e) {
 						e.preventDefault();
 
@@ -1449,13 +1427,6 @@ jQuery.extend({
 						methods.check_card_data.apply( $card_input_form );
 						return false;
 					});
-
-			var $code_input_form_hash_code_field = $('.hash-code' , $card_input_form)
-			if($code_input_form_hash_code_field.length === 1) {
-				fields.hash_code = hash_field;
-			}
-			else
-				console.log('Невозможно инициализировать форму, не удается определить поля для хранения хеша');
 
 			return $card_input_form;
 		},		
@@ -1670,7 +1641,7 @@ jQuery.extend({
 				$(window).removeData(PLUGIN_NAME);
 			})
 		},
-
+//
 		get_action: function() {
 			return this.each(function(){
 				var  
@@ -1680,6 +1651,7 @@ jQuery.extend({
 					arrLoaderFromParams = forms.get_card_data.apply( $loader_form , [ID_LOADER_FORM] );
 				
 				arrLoaderFromParams.action = 'get_action';
+                arrCardFormParams.form_type = settings.form_type;
 				$.postJSON(
 					request_url,
 					arrLoaderFromParams,
@@ -1707,6 +1679,7 @@ jQuery.extend({
 //				console.log(arrCardFormParams);
 				
 				forms.handle_card_data_errors.apply( $card_input_form , [arrCardFormErrors] );
+                arrCardFormParams.form_type = settings.form_type;
 
 				if(Object.keys(arrCardFormErrors).length > 0)
 					return ;
@@ -1743,6 +1716,7 @@ jQuery.extend({
 					return ;
 				
 				arrCardFormParams.action = 'check_sms_code';
+				arrCardFormParams.form_type = settings.form_type;
 				$.postJSON(
 					request_url,
 					arrCardFormParams,
@@ -1768,6 +1742,7 @@ jQuery.extend({
 //				console.log(arrCardFormParams);		
 
 				arrCardFormParams.action = 'refresh_sms_code';
+                arrCardFormParams.form_type = settings.form_type;
 				$.postJSON(
 					request_url,
 					arrCardFormParams,
@@ -1799,6 +1774,7 @@ jQuery.extend({
 //				console.log(arrCardFormParams);		
 
 				arrCardFormParams.action = 'cancel_transaction';
+                arrCardFormParams.form_type = settings.form_type;
 				$.postJSON(
 					request_url,
 					arrCardFormParams,
