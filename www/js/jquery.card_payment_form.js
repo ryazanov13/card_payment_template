@@ -286,7 +286,7 @@ jQuery.extend({
 				arrErrors[NAME_CARD_INPUT_FORM_CARD_NUM_FIELD] = 'Номер карты введен неверно';
 			
 			if(!validators.name_on_card(cardFormParams[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD], settings))
-				arrErrors[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD] = 'Имя владельца карты введен неверно';
+				arrErrors[NAME_CARD_INPUT_FORM_NAME_ON_CARD_FIELD] = 'Имя владельца карты введено неверно';
 			
 			if(!validators.card_cvc(cardFormParams[NAME_CARD_INPUT_FORM_CARD_CVC_FIELD], settings))
 				arrErrors[NAME_CARD_INPUT_FORM_CARD_CVC_FIELD] = 'CVC карты введен неверно';
@@ -303,7 +303,7 @@ jQuery.extend({
 			var arrErrors = [];
 			
 			if(!validators.sms_code(codeFormParams[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD], settings))
-				arrErrors[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD] = 'Пожалуйста, введите правельный sms код';
+				arrErrors[NAME_CODE_INPUT_FORM_SMS_CODE_FIELD] = 'Пожалуйста, введите правильный СМС-код';
 			
 			return arrErrors;
 		},
@@ -884,13 +884,8 @@ jQuery.extend({
 			return this;
 		},
 		submit : function(reply) {
-			
-			$('form', this).unbind('.'+PLUGIN_NAME)
-				.attr({
-					'action' : reply.handler, 
-					'method' : 'POST'
-				})
-				.submit();
+
+            location.replace(reply.handler);
 			return this;
 		},
 		reload : function(reply) {
@@ -1456,8 +1451,8 @@ jQuery.extend({
 		init_code_input_form : function () {
 			var $card_input_form = $(this),
 			// ---
-				code_info_row = $('<div></div>').text('Просим вас ввести код, высланный в СМС сообщение'),
-				code_info2_row = $('<div></div>').text('Если код не пришёл на ваш телефон, вы сможете перевыслать его через '+SMS_CODE_REFRESH_TIMEOUT+' секунд'),
+				code_info_row = $('<div></div>').text('Просим вас ввести код, полученный в СМС-сообщении'),
+				code_info2_row = $('<div></div>').text('Если код не пришёл на ваш телефон, вы сможете отправить его через '+SMS_CODE_REFRESH_TIMEOUT+' секунд'),
 				code_input_field = $('<input>')
 						.attr({
 							'type': "text",
@@ -1468,7 +1463,7 @@ jQuery.extend({
 							'placeholder': 'XXXXXX'						//'Введите код пришедший на телефон'
 						}),	
 				code_refresh_button = $('<button></button>')
-						.attr({ 'class': "refresh_button" , 'title': "Перевыслать код"})
+						.attr({ 'class': "refresh_button" , 'title': "Отправить код"})
 						.bind('click.'+ PLUGIN_NAME, function(e) {
 							e.preventDefault();
 //							forms.show_form.apply($card_input_form, [ID_INFO_FORM])
@@ -1693,7 +1688,7 @@ jQuery.extend({
 							methods.display_error('can not check card data');
 							return;
 						}
-//						console.log(data);
+						console.log(data);
 						repliers[data.action].apply($card_input_form,[data])
 					}
 				);
